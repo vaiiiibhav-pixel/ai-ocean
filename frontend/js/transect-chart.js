@@ -7,20 +7,36 @@
 
   const ColorMaps = global.ColorMaps || require("./colormap.js");
 
-  function drawTransect(canvas, { depths, lons, values, variable, latLabel }) {
+  function drawTransect(canvas, { depths, lons, values, variable, latLabel, palette = "thermal", isLog = false }) {
     const ctx = canvas.getContext("2d");
-    const w = canvas.width, h = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+      }
+    }
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const w = rect.width || canvas.width;
+    const h = rect.height || canvas.height;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#0b1f30";
+    ctx.fillStyle = "#071726";
     ctx.fillRect(0, 0, w, h);
 
-    const pad = { left: 46, right: 12, top: 22, bottom: 26 };
+    const pad = { left: 48, right: 16, top: 24, bottom: 28 };
     const plotW = w - pad.left - pad.right;
     const plotH = h - pad.top - pad.bottom;
 
     const flat = values.flat();
     const vMin = Math.min(...flat), vMax = Math.max(...flat);
-    const dMax = Math.max(...depths);
+    const dMax = Math.max(...depths, 100);
+
+    // Draw grid background
+    ctx.fillStyle = "#040e18";
+    ctx.fillRect(pad.left, pad.top, plotW, plotH);
 
     const cellW = plotW / lons.length;
     for (let di = 0; di < depths.length - 1; di++) {
@@ -28,26 +44,40 @@
       const yBot = pad.top + (depths[di + 1] / dMax) * plotH;
       for (let li = 0; li < lons.length; li++) {
         const v = values[di][li];
-        ctx.fillStyle = ColorMaps.valueToCSS(v, vMin, vMax, variable);
-        ctx.fillRect(pad.left + li * cellW, yTop, cellW + 0.5, yBot - yTop);
+        ctx.fillStyle = ColorMaps.valueToCSS(v, vMin, vMax, variable, palette, isLog);
+        ctx.fillRect(pad.left + li * cellW, yTop, cellW + 0.8, yBot - yTop + 0.8);
       }
     }
 
-    // axis labels
-    ctx.fillStyle = "rgba(255,255,255,0.65)";
+    // Gridlines
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    for (const d of depths) {
+      const y = pad.top + (d / dMax) * plotH;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(pad.left + plotW, y);
+      ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = "rgba(223,238,255,0.75)";
     ctx.font = "10px system-ui, sans-serif";
     for (const d of depths) {
       const y = pad.top + (d / dMax) * plotH;
-      ctx.fillText(`${d}m`, 2, y + 3);
+      ctx.fillText(`${d}m`, 4, y + 3);
     }
-    const lonTicks = [0, Math.floor(lons.length / 2), lons.length - 1];
+    const lonTicks = [0, Math.floor(lons.length / 4), Math.floor(lons.length / 2), Math.floor((3 * lons.length) / 4), lons.length - 1];
     for (const li of lonTicks) {
+      if (!lons[li]) continue;
       const x = pad.left + li * cellW;
-      ctx.fillText(`${lons[li].toFixed(0)}°E`, x, h - pad.bottom + 14);
+      ctx.fillText(`${lons[li].toFixed(0)}°E`, Math.max(pad.left, x - 8), h - pad.bottom + 16);
     }
-    ctx.fillStyle = "rgba(223,238,255,0.85)";
-    ctx.font = "11px system-ui, sans-serif";
-    ctx.fillText(`${variable} at ${latLabel}`, pad.left, 12);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "600 11px system-ui, sans-serif";
+    ctx.fillText(`${variable.toUpperCase()} CROSS-SECTION @ LAT ${latLabel}`, pad.left, 14);
+
+    ctx.restore();
   }
 
   const TransectChart = { drawTransect };

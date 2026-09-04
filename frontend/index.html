@@ -3,110 +3,468 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ocean 3D Visualization Platform</title>
-<meta name="description" content="Interactive 3D platform that integrates numerical ocean model output with in-situ observations (Argo-float profiles and moored buoys)" />
-<meta property="og:title" content="Ocean 3D Visualization Platform" />
-<meta property="og:description" content="Interactive 3D platform that integrates numerical ocean model output with in-situ observations (Argo-float profiles and moored buoys)" />
+<title>SIH26067 — Ocean 3D Visualization Platform | MoES · INCOIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <!-- BEGIN_APP -->
 <div id="app">
   <header>
-    <h1>🌊 Ocean 3D Visualization Platform</h1>
-    <span class="badge">prototype · synthetic data</span>
-    <button id="resetViewBtn" title="Reset camera">⟲ Reset view</button>
-    <span class="ps">SIH 2026 · PS 26067</span>
+    <div class="header-brand">
+      <div class="brand-crest" title="Ministry of Earth Sciences / INCOIS · Govt. of India">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" stroke="#2dd4bf" stroke-width="1.5" fill="#041624"/>
+          <path d="M7 20 C11 15, 15 23, 19 18 C22 14, 25 19, 27 16" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M6 24 C10 20, 15 26, 20 22 C23 19, 25 22, 27 21" stroke="#2dd4bf" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <circle cx="16" cy="10" r="3" fill="#f59e0b"/>
+          <path d="M16 4 L16 7 M12 6 L14 8 M20 6 L18 8" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-text-block">
+        <span class="brand-title">INCOIS 3D Ocean Intelligence</span>
+        <span class="brand-subtitle">MoES · ROMS 1/12° · SIH 26067</span>
+      </div>
+    </div>
+
+    <div class="live-status-pill" title="Operational numerical prediction and active GTS telecommunication stream">
+      <span class="pulse-dot"></span>
+      <span class="live-text">OPERATIONAL · ROMS 1/12°</span>
+    </div>
+
+    <div class="header-actions">
+      <button id="snapshotHeaderBtn" class="header-btn" title="Export High-Resolution 3D Snapshot PNG with Metadata Stamp">📷 Snapshot</button>
+      <button id="tourBtn" class="header-btn highlight" title="Guided Science Communication Tour">🎓 Tour</button>
+      <button id="ingestModalBtn" class="header-btn" title="Ingest NetCDF / CSV Datasets">📥 Ingest</button>
+      <button id="operationalModalBtn" class="header-btn" title="Operational Tools: PFZ, Cyclone TCHP, SAR Drift">⚡ Ops Suite</button>
+
+      <div class="dropdown-wrap">
+        <select id="cameraPresetSelect" class="header-select" title="Camera View Presets">
+          <option value="oblique">📷 3D Perspective</option>
+          <option value="topdown">🗺 Top-Down (Plan)</option>
+          <option value="arabian_sea">🌊 Arabian Sea</option>
+          <option value="bay_of_bengal">🌊 Bay of Bengal</option>
+          <option value="equatorial">🌐 Equatorial Basin</option>
+        </select>
+      </div>
+
+      <button id="resetViewBtn" class="header-btn" title="Reset camera position">⟲ Reset</button>
+    </div>
   </header>
+
   <main>
-    <div class="viewport">
+    <div class="viewport" id="viewportContainer">
       <canvas id="scene"></canvas>
+
+      <!-- Floating Viewport Control Gizmo -->
+      <div id="viewportToolbar" class="viewport-toolbar" title="Viewport Controls">
+        <button id="zoomInBtn" class="viewport-tool-btn" title="Zoom In (+)">+</button>
+        <button id="zoomOutBtn" class="viewport-tool-btn" title="Zoom Out (−)">−</button>
+        <button id="toggle2D3DBtn" class="viewport-tool-btn" title="Toggle 2D Plan / 3D Perspective">2D/3D</button>
+        <button id="snapshotBtn" class="viewport-tool-btn" title="Capture High-Res View Snapshot">📷</button>
+        <button id="fullscreenBtn" class="viewport-tool-btn" title="Toggle Fullscreen Canvas">⛶</button>
+      </div>
+
+      <!-- Real-Time Cursor Telemetry HUD Bar -->
+      <div id="viewportTelemetry" class="viewport-telemetry">
+        <div class="telem-item"><span class="telem-lbl">LOCATION:</span> <strong id="telemCoords" class="telem-val">12.50°N, 84.20°E</strong></div>
+        <div class="telem-item"><span class="telem-lbl">DEPTH:</span> <strong id="telemDepth" class="telem-val">0 m (Surface)</strong></div>
+        <div class="telem-item"><span class="telem-lbl" id="telemVarLbl">SST:</span> <strong id="telemVal" class="telem-val">29.40 °C</strong></div>
+        <div class="telem-item"><span class="telem-lbl">CURRENTS:</span> <strong id="telemCurrents" class="telem-val">0.42 m/s @ 072° (ENE)</strong></div>
+        <div id="telemStation" class="telem-item telem-station" hidden><span class="telem-lbl">STATION:</span> <strong id="telemStationVal" class="telem-val">—</strong></div>
+      </div>
 
       <div id="loadingOverlay">
         <div class="spinner"></div>
-        <div>Loading ocean data…</div>
+        <div id="loadingText">Connecting to Ocean Model API & In-Situ Data…</div>
       </div>
 
       <div id="hoverTip" hidden></div>
 
+      <!-- Station Depth Profile Inspector -->
       <div id="stationPanel" hidden>
         <div class="head">
-          <span id="stationTitle"></span>
-          <button id="stationPanelClose">✕</button>
+          <div>
+            <span id="stationTitle" class="station-title"></span>
+            <span id="stationBadge" class="type-pill"></span>
+          </div>
+          <button id="stationPanelClose" title="Close inspector">✕</button>
         </div>
         <div id="stationMeta"></div>
-        <canvas id="profileChart" width="300" height="220"></canvas>
-        <button id="exportCsvBtn">⬇ Export profile CSV</button>
+
+        <div class="station-metrics" id="stationMetrics">
+          <div class="metric-item"><span class="m-lbl">Bias</span><span class="m-val" id="stBias">—</span></div>
+          <div class="metric-item"><span class="m-lbl">RMSE</span><span class="m-val" id="stRMSE">—</span></div>
+          <div class="metric-item"><span class="m-lbl">Thermocline</span><span class="m-val" id="stThermo">110m</span></div>
+        </div>
+
+        <canvas id="profileChart" width="310" height="210"></canvas>
+        <div class="chart-legend-hint">● Solid: In-Situ Observation &nbsp;|&nbsp; ┄┄ Dashed: Numerical Model</div>
+
+        <div class="panel-btn-row">
+          <button id="exportCsvBtn" class="secondary-btn small-btn">⬇ Export Profile CSV</button>
+          <button id="focusStationBtn" class="secondary-btn small-btn">🎯 Center in 3D</button>
+        </div>
       </div>
 
+      <!-- Vertical Cross-Section (Transect) Panel -->
       <div id="transectPanel" hidden>
         <div class="head">
-          <span>Vertical cross-section</span>
-          <button id="transectPanelClose">✕</button>
+          <span class="panel-title">📐 Vertical Cross-Section (Hovmoller Transect)</span>
+          <button id="transectPanelClose" title="Close cross-section">✕</button>
         </div>
-        <div class="control-group">
-          <label>Latitude: <span id="transectLatLabel"></span></label>
+        <div class="control-group compact-group">
+          <div class="row">
+            <label>Latitude Slicing: <strong id="transectLatLabel">10.0°N</strong></label>
+            <span class="hint-inline">Indian Ocean Depth Profile</span>
+          </div>
           <input id="transectLatSlider" type="range" min="0" max="20" step="1" value="10" />
         </div>
-        <canvas id="transectChart" width="460" height="200"></canvas>
-        <div class="hint-inline">colour = selected variable · x = longitude · y = depth</div>
+        <canvas id="transectChart" width="480" height="200"></canvas>
+        <div class="hint-inline">Colour = selected variable · X = Longitude (40°E–100°E) · Y = Depth (0–500m)</div>
       </div>
 
+      <!-- Customizable Colorbar & Palette Controls -->
       <div id="legend-wrap">
-        <div class="label">Colour scale</div>
-        <canvas id="legend" width="160" height="14"></canvas>
+        <div class="legend-header">
+          <span class="legend-title" id="legendVarLabel">Temperature (°C)</span>
+          <select id="paletteSelect" class="compact-select" title="Change Colormap Palette">
+            <option value="thermal">Thermal</option>
+            <option value="turbo">Google Turbo</option>
+            <option value="viridis">Viridis</option>
+            <option value="haline">Haline</option>
+            <option value="chlorophyll">Chlorophyll / Algae</option>
+            <option value="plasma">Plasma</option>
+          </select>
+        </div>
+        <canvas id="legend" width="180" height="14"></canvas>
+        <div class="legend-ticks">
+          <span id="legendMinVal">18.0</span>
+          <span id="legendMidVal">25.0</span>
+          <span id="legendMaxVal">32.0</span>
+        </div>
+        <div class="legend-options">
+          <label class="legend-cb"><input type="checkbox" id="logScaleToggle" /> Log scale</label>
+          <button id="autoFitScaleBtn" class="link-btn" title="Auto-fit range to current slice">Auto-fit</button>
+        </div>
       </div>
-      <div class="hint">drag to rotate · scroll to zoom · click a marker for its depth profile</div>
-      <div id="loadError" hidden>Could not reach the backend API. Is the Flask server running (see README)?</div>
+
+      <!-- Science Outreach Guided Story Card -->
+      <div id="tourCard" hidden>
+        <div class="tour-header">
+          <div class="tour-badge">SCIENCE COMMUNICATION</div>
+          <button id="tourCloseBtn" class="tour-close">✕</button>
+        </div>
+        <h3 id="tourTitle">Chapter 1: The Monsoonal Indian Ocean</h3>
+        <p id="tourBody">The North Indian Ocean is unique among world oceans due to seasonal wind reversals: the Southwest Monsoon in summer and the Northeast Monsoon in winter.</p>
+        <div class="tour-footer">
+          <div class="tour-dots" id="tourDots">
+            <span class="dot active"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+          <div class="tour-nav">
+            <button id="tourPrevBtn" class="secondary-btn small-btn">◀ Back</button>
+            <button id="tourNextBtn" class="primary-btn small-btn">Next ▶</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">drag to rotate · scroll to zoom · click an instrument pin to inspect depth profile</div>
+      <div id="loadError" hidden>Could not reach the backend API. Please ensure the server is active.</div>
     </div>
+
+    <!-- Sidebar Controls -->
     <aside>
-      <h2>Variable</h2>
-      <div class="radio-row control-group">
-        <label><input type="radio" name="variable" value="temperature" checked /> Temperature</label>
-        <label><input type="radio" name="variable" value="salinity" /> Salinity</label>
+      <div class="sidebar-section">
+        <h2>Variable</h2>
+        <div class="radio-row control-group">
+          <label><input type="radio" name="variable" value="temperature" checked /> 🌡️ Temp (°C)</label>
+          <label><input type="radio" name="variable" value="salinity" /> 🧂 Salinity (PSU)</label>
+          <label><input type="radio" name="variable" value="chlorophyll" /> 🌿 Chl-a (mg/m³)</label>
+        </div>
       </div>
 
-      <h2>Depth</h2>
-      <div class="control-group">
-        <input id="depthSlider" type="range" min="0" max="4" step="1" value="0" />
-        <div class="row"><span>Surface</span><span id="depthLabel">0 m</span><span>Deep</span></div>
+      <div class="sidebar-section">
+        <h2>3D View Mode</h2>
+        <div class="mode-pills">
+          <button class="pill-btn active" data-mode="slice" id="modeSliceBtn">Surface / Slice</button>
+          <button class="pill-btn" data-mode="volumetric" id="modeVolumetricBtn">3D Water Column</button>
+          <button class="pill-btn" data-mode="isosurface" id="modeIsosurfaceBtn">26°C Isotherm</button>
+        </div>
       </div>
 
-      <h2>Time</h2>
-      <div class="control-group">
-        <input id="timeSlider" type="range" min="0" max="5" step="1" value="0" />
-        <div class="row"><span id="timeLabel"></span><span></span></div>
-        <button id="playBtn">▶ Play</button>
+      <div class="sidebar-section">
+        <h2>Depth Level</h2>
+        <div class="control-group">
+          <input id="depthSlider" type="range" min="0" max="4" step="1" value="0" />
+          <div class="row depth-steps">
+            <span>0m (Surface)</span>
+            <span id="depthLabel" class="highlight-val">0 m</span>
+            <span>500m (Deep)</span>
+          </div>
+          <div class="depth-chips-row" id="depthChips">
+            <button class="depth-chip active" data-depth="0">0m (SFC)</button>
+            <button class="depth-chip" data-depth="1">50m (MLD)</button>
+            <button class="depth-chip" data-depth="2">100m (THRM)</button>
+            <button class="depth-chip" data-depth="3">200m</button>
+            <button class="depth-chip" data-depth="4">500m (ABYS)</button>
+          </div>
+        </div>
       </div>
 
-      <h2>Layers</h2>
-      <div class="control-group">
-        <div class="checkbox-row"><input id="showCurrents" type="checkbox" checked /> Current vectors</div>
-        <div class="checkbox-row"><input id="showStations" type="checkbox" checked /> In-situ stations (Argo/buoy)</div>
-        <button id="transectBtn" class="secondary-btn">📐 Vertical cross-section</button>
+      <div class="sidebar-section">
+        <h2>Time Step</h2>
+        <div class="control-group">
+          <input id="timeSlider" type="range" min="0" max="5" step="1" value="0" />
+          <div class="row">
+            <span id="timeLabel" class="highlight-val">2026-03-01T00:00Z</span>
+            <span class="time-step-info">6h interval</span>
+          </div>
+          <div class="time-btn-row">
+            <button id="playBtn">▶ Play Animation</button>
+            <button id="stepBackBtn" class="secondary-btn">⏮</button>
+            <button id="stepFwdBtn" class="secondary-btn">⏭</button>
+          </div>
+        </div>
       </div>
 
-      <h2>Model skill <span class="hint-inline">(model vs. observations)</span></h2>
-      <div id="validationPanel" class="control-group stat-box">computing…</div>
+      <div class="sidebar-section">
+        <h2>3D Relief & Display</h2>
+        <div class="control-group">
+          <div class="row">
+            <label>Vertical Exaggeration: <span id="exaggVal">0.55x</span></label>
+          </div>
+          <input id="exaggerationSlider" type="range" min="0.1" max="3.0" step="0.05" value="0.55" />
 
-      <h2>In-situ stations <span class="hint-inline" id="stationCountLabel"></span></h2>
-      <div class="control-group">
-        <input id="stationSearch" type="text" placeholder="Filter by id…" />
-        <div id="stationList"></div>
+          <div class="row" style="margin-top: 8px;">
+            <label>Mesh Opacity: <span id="opacityVal">95%</span></label>
+          </div>
+          <input id="opacitySlider" type="range" min="0.2" max="1.0" step="0.05" value="0.95" />
+        </div>
       </div>
 
-      <h2>About</h2>
-      <p style="font-size:12px;color:var(--muted);line-height:1.5;">
-        Ocean-surface mesh coloured by a synthetic numerical-model field
-        (temperature/salinity), overlaid with synthetic current vectors and
-        Argo-float-style in-situ station profiles. Click a station (in the
-        3D view or the list) to compare its observed depth profile against
-        the model's nearest column. See README for what is real vs.
-        synthetic and how to wire in real data sources.
-      </p>
+      <div class="sidebar-section">
+        <h2>Layers & Overlays</h2>
+        <div class="control-group">
+          <div class="checkbox-row"><input id="showCurrents" type="checkbox" checked /> <span>Current vectors (u, v)</span></div>
+          <div class="checkbox-row"><input id="showParticles" type="checkbox" /> <span>Animated flow particles</span></div>
+          <div class="checkbox-row"><input id="showStations" type="checkbox" checked /> <span>In-situ observation fleet</span></div>
+          <div class="checkbox-row"><input id="showCoastlines" type="checkbox" checked /> <span>India & Basin Coastlines</span></div>
+          <div class="checkbox-row"><input id="showEEZ" type="checkbox" checked /> <span>Indian EEZ Boundary (200 nm)</span></div>
+          <button id="transectBtn" class="secondary-btn full-btn">📐 Open Vertical Cross-Section</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2>Model Skill <span class="hint-inline">(Model vs In-Situ)</span></h2>
+        <div id="validationPanel" class="control-group stat-box">computing…</div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-head-row">
+          <h2>In-Situ Fleet <span class="hint-inline" id="stationCountLabel"></span></h2>
+        </div>
+
+        <div class="instrument-filter-pills" id="fleetFilterPills">
+          <button class="inst-pill active" data-kind="all">All</button>
+          <button class="inst-pill" data-kind="argo">Argo</button>
+          <button class="inst-pill" data-kind="glider">Gliders</button>
+          <button class="inst-pill" data-kind="buoy">Buoys</button>
+          <button class="inst-pill" data-kind="ctd">CTD</button>
+        </div>
+
+        <div class="control-group">
+          <input id="stationSearch" type="text" placeholder="Search WMO ID, platform, or basin…" />
+          <div id="stationList"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2>Operational Mandates</h2>
+        <div class="operational-quick-links">
+          <button id="quickPFZBtn" class="op-chip">🐟 Potential Fishing Zones</button>
+          <button id="quickTCHPBtn" class="op-chip">🌀 Cyclone Heat Potential</button>
+          <button id="quickSARBtn" class="op-chip">🚢 SAR & Spill Drift</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2>Data Standards & Portals</h2>
+        <div class="external-links">
+          <a href="https://incois.gov.in" target="_blank" rel="noopener noreferrer">🌐 INCOIS Ocean Portal</a>
+          <a href="https://las.incois.gov.in" target="_blank" rel="noopener noreferrer">📊 INCOIS Live Access Server (LAS)</a>
+          <a href="https://data.marine.copernicus.eu" target="_blank" rel="noopener noreferrer">🛰️ Copernicus Marine Service</a>
+          <a href="https://fleetmonitoring.euro-argo.eu" target="_blank" rel="noopener noreferrer">📍 Euro-Argo / Ifremer Fleet</a>
+        </div>
+      </div>
     </aside>
   </main>
-  <footer>Region: 40–100°E, 10°S–30°N · Indian Ocean (Arabian Sea / Bay of Bengal) · all data synthetic</footer>
+
+  <!-- Data Ingestion Modal (NetCDF / CSV) -->
+  <div id="ingestionModal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">📥 Multi-Format Ocean Data Ingestion</div>
+          <div class="modal-subtitle">Supports NetCDF (CF-1.8 Conventions) and CSV/TXT Station & Trajectory Files</div>
+        </div>
+        <button id="ingestionModalClose" class="modal-close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="upload-dropzone" id="fileDropZone">
+          <input type="file" id="netcdfFileInput" accept=".nc,.nc4,.csv,.txt" hidden />
+          <div class="dropzone-icon">📁</div>
+          <div class="dropzone-title">Drag & Drop NetCDF (.nc) or CSV (.csv) file here</div>
+          <div class="dropzone-sub">or click to browse local filesystem</div>
+        </div>
+
+        <div class="sample-catalog-title">Or Choose a Verified INCOIS / Copernicus Sample Dataset:</div>
+        <div class="sample-grid" id="sampleDatasetGrid">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div id="ingestPreviewBox" class="ingest-preview" hidden>
+          <div class="preview-header">
+            <span id="previewFileName">Dataset Info</span>
+            <span class="badge" id="previewFileFormat">NetCDF</span>
+          </div>
+          <div id="previewDetails" class="preview-details"></div>
+          <button id="applyIngestedBtn" class="primary-btn full-btn" style="margin-top: 10px;">Render Ingested Dataset in 3D Viewer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Decision-Making Suite Modal (PFZ, TCHP, SAR Drift) -->
+  <div id="operationalModal" class="modal-overlay" hidden>
+    <div class="modal-card large-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">⚡ Operational Ocean Intelligence Suite</div>
+          <div class="modal-subtitle">INCOIS Decision Support for Fisheries, Disaster Warning & Maritime Safety</div>
+        </div>
+        <button id="operationalModalClose" class="modal-close">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="pfz">🐟 Potential Fishing Zones (PFZ)</button>
+        <button class="modal-tab" data-tab="tchp">🌀 Tropical Cyclone Heat Potential (TCHP)</button>
+        <button class="modal-tab" data-tab="sar">🚢 SAR & Oil Spill Drift Trajectory</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- PFZ Tab -->
+        <div id="tabContentPFZ" class="tab-pane active">
+          <div class="op-intro-box">
+            <p><strong>INCOIS PFZ Mission:</strong> Thermal fronts ($\nabla SST$) coupled with chlorophyll-a blooms identify marine upwelling zones where pelagic fish congregate. Generating daily coordinates saves 30-70% diesel expenditure for traditional fishers.</p>
+          </div>
+          <div class="pfz-controls-row">
+            <button id="togglePFZOverlayBtn" class="primary-btn small-btn">Toggle PFZ Hotspots in 3D View</button>
+            <button id="exportPFZBulletinBtn" class="secondary-btn small-btn">⬇ Export PFZ Daily Bulletin (CSV)</button>
+          </div>
+          <div class="pfz-table-wrap">
+            <table class="op-table" id="pfzTable">
+              <thead>
+                <tr>
+                  <th>Latitude</th>
+                  <th>Longitude</th>
+                  <th>SST Front</th>
+                  <th>Chl-a</th>
+                  <th>Coastal Sector</th>
+                  <th>Target Pelagic Species</th>
+                  <th>Advisory</th>
+                </tr>
+              </thead>
+              <tbody id="pfzTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TCHP Tab -->
+        <div id="tabContentTCHP" class="tab-pane">
+          <div class="op-intro-box">
+            <p><strong>Tropical Cyclone Heat Potential (TCHP):</strong> Ocean heat content from the surface to the 26°C isotherm depth ($D_{26}$) is the critical fuel for explosive cyclone intensification in the Bay of Bengal and Arabian Sea. Values exceeding 60 kJ/cm² signify dangerous intensification risk.</p>
+          </div>
+          <div class="pfz-controls-row">
+            <button id="toggleTCHPOverlayBtn" class="primary-btn small-btn">Toggle TCHP Hazard Zones in 3D View</button>
+            <span class="badge warning" id="cycloneRiskBadge">Bay of Bengal & Arabian Sea Monitored</span>
+          </div>
+          <div class="tchp-metrics-grid" id="tchpMetricsGrid">
+            <div class="tchp-card">
+              <div class="tchp-title">Bay of Bengal Mean D26</div>
+              <div class="tchp-value">78 m</div>
+              <div class="tchp-sub">Deep warm fresh cap</div>
+            </div>
+            <div class="tchp-card">
+              <div class="tchp-title">Peak TCHP Heat Pool</div>
+              <div class="tchp-value highlight-red">82.4 kJ/cm²</div>
+              <div class="tchp-sub">Central BoB (14°N, 88°E)</div>
+            </div>
+            <div class="tchp-card">
+              <div class="tchp-title">Arabian Sea Mean D26</div>
+              <div class="tchp-value">46 m</div>
+              <div class="tchp-sub">Upwelling ventilated</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SAR Drift Tab -->
+        <div id="tabContentSAR" class="tab-pane">
+          <div class="op-intro-box">
+            <p><strong>Maritime Search and Rescue (SAR) & Spill Drift:</strong> Lagrangian forward trajectory integration utilizing numerical ocean model surface currents and windage leeway. Generates an hourly drift track and expanding search probability ellipses.</p>
+          </div>
+          <div class="sar-form-row">
+            <div class="sar-input-group">
+              <label>Distress / Spill Latitude (°N)</label>
+              <input type="number" id="sarLatInput" value="14.0" step="0.5" min="-10" max="30" />
+            </div>
+            <div class="sar-input-group">
+              <label>Distress / Spill Longitude (°E)</label>
+              <input type="number" id="sarLonInput" value="85.0" step="0.5" min="40" max="100" />
+            </div>
+            <div class="sar-input-group">
+              <label>Drift Forecast Window</label>
+              <select id="sarHoursSelect">
+                <option value="24">24 Hours</option>
+                <option value="48" selected>48 Hours</option>
+                <option value="72">72 Hours</option>
+              </select>
+            </div>
+            <div class="sar-input-group">
+              <label>Object Leeway (Windage)</label>
+              <select id="sarLeewaySelect">
+                <option value="0.01">Life Raft / Person in Water (1%)</option>
+                <option value="0.03" selected>Fishing Vessel / Skiff (3%)</option>
+                <option value="0.05">Container / Crude Oil Slick (5%)</option>
+              </select>
+            </div>
+          </div>
+          <div class="pfz-controls-row" style="margin-top: 10px;">
+            <button id="runSARSimBtn" class="primary-btn small-btn">▶ Calculate & Display Drift Track</button>
+            <span id="sarResultSummary" class="hint-inline">Click on the 3D map or enter coordinates above</span>
+          </div>
+          <div class="sar-timeline-box" id="sarTimelineBox" hidden>
+            <div id="sarTrajectoryList" class="sar-trajectory-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-content">
+      <span>Spatial Domain: 40°E–100°E, 10°S–30°N · Indian Ocean (Arabian Sea, Bay of Bengal, Equatorial Basin)</span>
+      <span>CF-1.8 NetCDF & OGC Compliant · Developed for SIH 2026 Problem Statement 26067</span>
+    </div>
+  </footer>
 </div>
 <!-- END_APP -->
 

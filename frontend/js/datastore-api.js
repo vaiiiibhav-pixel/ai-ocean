@@ -44,6 +44,26 @@
       const r = await fetch(`${this.baseUrl}/api/validation/summary`);
       return r.json();
     }
+
+    async getPFZ(timeIndex = 0) {
+      const r = await fetch(`${this.baseUrl}/api/operational/pfz?time_index=${timeIndex}`);
+      return r.json();
+    }
+
+    async getTCHP(timeIndex = 0) {
+      const r = await fetch(`${this.baseUrl}/api/operational/tchp?time_index=${timeIndex}`);
+      return r.json();
+    }
+
+    async getSARDrift(lat, lon, hours = 48, leeway = 0.03) {
+      const r = await fetch(`${this.baseUrl}/api/operational/sar-drift?lat=${lat}&lon=${lon}&hours=${hours}&leeway=${leeway}`);
+      return r.json();
+    }
+
+    async getSamples() {
+      const r = await fetch(`${this.baseUrl}/api/ingest/samples`);
+      return r.json();
+    }
   }
 
   global.ApiDataStore = ApiDataStore;

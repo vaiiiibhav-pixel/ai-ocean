@@ -22,6 +22,55 @@
     [1.00, [30, 40, 150]],    // salty — deep blue/violet
   ];
 
+  // Sequential "chlorophyll / algae" colormap: oligotrophic blue -> rich emerald -> bloom gold.
+  const CHLOROPHYLL_STOPS = [
+    [0.00, [10, 25, 60]],     // clear oceanic blue
+    [0.18, [15, 60, 90]],
+    [0.35, [20, 120, 95]],
+    [0.55, [45, 180, 80]],    // emerald green
+    [0.75, [160, 215, 50]],   // yellow-green
+    [0.90, [235, 200, 40]],   // high bloom gold
+    [1.00, [230, 80, 25]],    // hyper-bloom reddish orange
+  ];
+
+  // Perceptually uniform "viridis" colormap.
+  const VIRIDIS_STOPS = [
+    [0.00, [68, 1, 84]],
+    [0.25, [59, 82, 139]],
+    [0.50, [33, 145, 140]],
+    [0.75, [94, 201, 98]],
+    [1.00, [253, 231, 37]],
+  ];
+
+  // Google "turbo" colormap.
+  const TURBO_STOPS = [
+    [0.00, [48, 18, 59]],
+    [0.15, [70, 134, 251]],
+    [0.35, [27, 229, 181]],
+    [0.55, [164, 252, 60]],
+    [0.75, [251, 185, 56]],
+    [0.90, [227, 89, 51]],
+    [1.00, [122, 4, 3]],
+  ];
+
+  // "plasma" colormap.
+  const PLASMA_STOPS = [
+    [0.00, [13, 8, 135]],
+    [0.25, [126, 3, 168]],
+    [0.50, [204, 71, 120]],
+    [0.75, [248, 149, 64]],
+    [1.00, [240, 249, 33]],
+  ];
+
+  const PALETTES = {
+    thermal: THERMAL_STOPS,
+    haline: HALINE_STOPS,
+    chlorophyll: CHLOROPHYLL_STOPS,
+    viridis: VIRIDIS_STOPS,
+    turbo: TURBO_STOPS,
+    plasma: PLASMA_STOPS,
+  };
+
   function lerp(a, b, t) {
     return a + (b - a) * t;
   }
@@ -43,14 +92,27 @@
     return stops[stops.length - 1][1];
   }
 
-  function valueToRGB(value, min, max, variable) {
-    const t = max > min ? (value - min) / (max - min) : 0.5;
-    const stops = variable === "salinity" ? HALINE_STOPS : THERMAL_STOPS;
+  function getStopsFor(variable, palette) {
+    if (palette && PALETTES[palette]) return PALETTES[palette];
+    if (variable === "salinity") return HALINE_STOPS;
+    if (variable === "chlorophyll") return CHLOROPHYLL_STOPS;
+    return THERMAL_STOPS;
+  }
+
+  function valueToRGB(value, min, max, variable, palette, isLog) {
+    let t;
+    if (isLog && min > 0 && max > min) {
+      const vClamped = Math.max(min, Math.min(max, value));
+      t = (Math.log10(vClamped) - Math.log10(min)) / (Math.log10(max) - Math.log10(min));
+    } else {
+      t = max > min ? (value - min) / (max - min) : 0.5;
+    }
+    const stops = getStopsFor(variable, palette);
     return sampleStops(stops, t);
   }
 
-  function valueToCSS(value, min, max, variable) {
-    const [r, g, b] = valueToRGB(value, min, max, variable);
+  function valueToCSS(value, min, max, variable, palette, isLog) {
+    const [r, g, b] = valueToRGB(value, min, max, variable, palette, isLog);
     return `rgb(${r},${g},${b})`;
   }
 
@@ -58,7 +120,19 @@
     return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
   }
 
-  const ColorMaps = { valueToRGB, valueToCSS, rgbToCSS, THERMAL_STOPS, HALINE_STOPS };
+  const ColorMaps = {
+    valueToRGB,
+    valueToCSS,
+    rgbToCSS,
+    getStopsFor,
+    PALETTES,
+    THERMAL_STOPS,
+    HALINE_STOPS,
+    CHLOROPHYLL_STOPS,
+    VIRIDIS_STOPS,
+    TURBO_STOPS,
+    PLASMA_STOPS,
+  };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = ColorMaps;

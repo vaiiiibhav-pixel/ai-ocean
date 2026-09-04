@@ -1,6 +1,6 @@
 {
   "name": "Ocean 3D Visualization Platform",
-  "description": "Interactive 3D platform that integrates numerical ocean model output with in-situ observations (Argo-float profiles and moored buoys)",
+  "description": "Interactive 3D visualization platform integrating numerical ocean model outputs (temperature, salinity, chlorophyll, currents) with in-situ Argo floats, gliders, and buoys for SIH 26067 (MoES / INCOIS)",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
