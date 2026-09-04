@@ -3,7 +3,7 @@
 // screenshot the result. Also fails loudly on any console error/pageerror.
 const { chromium } = require("playwright");
 
-const TARGET = process.argv[2] || "http://127.0.0.1:8000/";
+const TARGET = process.argv[2] || "http://127.0.0.1:3000/";
 const OUT = process.argv[3] || "/tmp/smoke.png";
 
 (async () => {

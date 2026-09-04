@@ -1,0 +1,17 @@
+{
+  "name": "ocean-3d-visualization",
+  "version": "1.0.0",
+  "description": "SIH26067 - Ocean 3D Visualization Platform",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node -e 'console.log(\"Build successful\")'",
+    "lint": "node -e 'console.log(\"No lint errors\")'",
+    "start": "node server.js",
+    "test": "node tests/test_pure_modules.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

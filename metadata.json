@@ -1,0 +1,6 @@
+{
+  "name": "Ocean 3D Visualization Platform",
+  "description": "Interactive 3D platform that integrates numerical ocean model output with in-situ observations (Argo-float profiles and moored buoys)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
