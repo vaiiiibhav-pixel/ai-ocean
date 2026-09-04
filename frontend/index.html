@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SIH26067 — Ocean 3D Visualization Platform</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<!-- BEGIN_APP -->
+<div id="app">
+  <header>
+    <h1>🌊 Ocean 3D Visualization Platform</h1>
+    <span class="badge">prototype · synthetic data</span>
+    <button id="resetViewBtn" title="Reset camera">⟲ Reset view</button>
+    <span class="ps">SIH 2026 · PS 26067</span>
+  </header>
+  <main>
+    <div class="viewport">
+      <canvas id="scene"></canvas>
+
+      <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div>Loading ocean data…</div>
+      </div>
+
+      <div id="hoverTip" hidden></div>
+
+      <div id="stationPanel" hidden>
+        <div class="head">
+          <span id="stationTitle"></span>
+          <button id="stationPanelClose">✕</button>
+        </div>
+        <div id="stationMeta"></div>
+        <canvas id="profileChart" width="300" height="220"></canvas>
+        <button id="exportCsvBtn">⬇ Export profile CSV</button>
+      </div>
+
+      <div id="transectPanel" hidden>
+        <div class="head">
+          <span>Vertical cross-section</span>
+          <button id="transectPanelClose">✕</button>
+        </div>
+        <div class="control-group">
+          <label>Latitude: <span id="transectLatLabel"></span></label>
+          <input id="transectLatSlider" type="range" min="0" max="20" step="1" value="10" />
+        </div>
+        <canvas id="transectChart" width="460" height="200"></canvas>
+        <div class="hint-inline">colour = selected variable · x = longitude · y = depth</div>
+      </div>
+
+      <div id="legend-wrap">
+        <div class="label">Colour scale</div>
+        <canvas id="legend" width="160" height="14"></canvas>
+      </div>
+      <div class="hint">drag to rotate · scroll to zoom · click a marker for its depth profile</div>
+      <div id="loadError" hidden>Could not reach the backend API. Is the Flask server running (see README)?</div>
+    </div>
+    <aside>
+      <h2>Variable</h2>
+      <div class="radio-row control-group">
+        <label><input type="radio" name="variable" value="temperature" checked /> Temperature</label>
+        <label><input type="radio" name="variable" value="salinity" /> Salinity</label>
+      </div>
+
+      <h2>Depth</h2>
+      <div class="control-group">
+        <input id="depthSlider" type="range" min="0" max="4" step="1" value="0" />
+        <div class="row"><span>Surface</span><span id="depthLabel">0 m</span><span>Deep</span></div>
+      </div>
+
+      <h2>Time</h2>
+      <div class="control-group">
+        <input id="timeSlider" type="range" min="0" max="5" step="1" value="0" />
+        <div class="row"><span id="timeLabel"></span><span></span></div>
+        <button id="playBtn">▶ Play</button>
+      </div>
+
+      <h2>Layers</h2>
+      <div class="control-group">
+        <div class="checkbox-row"><input id="showCurrents" type="checkbox" checked /> Current vectors</div>
+        <div class="checkbox-row"><input id="showStations" type="checkbox" checked /> In-situ stations (Argo/buoy)</div>
+        <button id="transectBtn" class="secondary-btn">📐 Vertical cross-section</button>
+      </div>
+
+      <h2>Model skill <span class="hint-inline">(model vs. observations)</span></h2>
+      <div id="validationPanel" class="control-group stat-box">computing…</div>
+
+      <h2>In-situ stations <span class="hint-inline" id="stationCountLabel"></span></h2>
+      <div class="control-group">
+        <input id="stationSearch" type="text" placeholder="Filter by id…" />
+        <div id="stationList"></div>
+      </div>
+
+      <h2>About</h2>
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;">
+        Ocean-surface mesh coloured by a synthetic numerical-model field
+        (temperature/salinity), overlaid with synthetic current vectors and
+        Argo-float-style in-situ station profiles. Click a station (in the
+        3D view or the list) to compare its observed depth profile against
+        the model's nearest column. See README for what is real vs.
+        synthetic and how to wire in real data sources.
+      </p>
+    </aside>
+  </main>
+  <footer>Region: 40–100°E, 10°S–30°N · Indian Ocean (Arabian Sea / Bay of Bengal) · all data synthetic</footer>
+</div>
+<!-- END_APP -->
+
+<script src="js/colormap.js"></script>
+<script src="js/projector.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/profile-chart.js"></script>
+<script src="js/transect-chart.js"></script>
+<script src="js/datastore-api.js"></script>
+<script src="js/datastore-embedded.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

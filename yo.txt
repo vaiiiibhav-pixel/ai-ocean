@@ -1,0 +1,31 @@
+SIH26067 — Ocean 3D Visualization Platform: Prototype Status
+Problem statement 26067: develop a web-based interactive 3D visualization platform integrating numerical ocean model outputs with in-situ observations (Ministry of Earth Sciences / INCOIS).
+
+What exists
+A full-stack working prototype, delivered two ways from the same source:
+
+Full project (Flask backend + vanilla-JS frontend + tests + README) — downloadable code, meant to be extended.
+Self-contained live demo — a single HTML file with the dataset embedded, published as a shareable Claude artifact link (no server needed, works offline).
+Both are generated from the same frontend/js/*.js rendering code; only the data source differs (ApiDataStore fetching from Flask vs. EmbeddedDataStore reading embedded JSON).
+
+Key design decision: no Three.js / WebGL
+The 3D scene is a hand-rolled canvas-2D perspective-projection renderer (projector.js + scene.js), not Three.js. This was a direct response to the sandbox this was built in having no outbound network access (pip/npm/CDN all blocked), so a CDN-dependent renderer couldn't be tested or trusted to work reliably in a live demo. The upside kept even outside that constraint: zero dependencies, no CDN to go down mid-pitch, works fully offline. Swapping in a GPU-accelerated renderer later is a contained change (same OceanScene method names).
+
+Features implemented
+Ocean-surface mesh (Arabian Sea / Bay of Bengal / equatorial Indian Ocean region) colored by temperature or salinity, with height relief from the same field
+Depth (5 levels) and time (6 steps) sliders with smooth eased transitions, play/pause animation
+Current vectors, ~18 Argo-float/buoy station markers (searchable list, hover tooltip, click for detail)
+Observed vs. model depth-profile comparison chart per station, with CSV export
+Aggregate model-skill panel (RMSE/bias between all stations and the model)
+Vertical cross-section (transect) view — depth vs. longitude Hovmöller-style slice
+Reset-view button, compass, lat/lon axis labels
+What's synthetic vs. real
+All model-grid and observation data is synthetic (numpy-generated, realistic shape/behavior — warm pool, Arabian Sea upwelling, Bay of Bengal freshening, etc.), because the sandbox this was built in had no network access to real sources (INCOIS GOFS, Copernicus Marine, Argo GDAC). The data-access layer (backend/app/data_gen.py) is isolated so a real-data swap only touches that one file — documented in the project README's "Real data vs. synthetic data" section.
+
+Verification done
+Node unit tests for the pure color/projection math (10 tests)
+Playwright headless smoke tests (both the live Flask-served app and the standalone demo): render check, station click, CSV download capture, animation playback, all layer/variable toggles — zero console/page errors as of last run
+Not yet done
+No team name / solution name chosen for this entry yet
+No pitch deck (PPT) — this session went straight to code per explicit request
+Real data integration, auth/persistence, production deployment — all explicitly out of scope for this prototype pass (see README limitations)
