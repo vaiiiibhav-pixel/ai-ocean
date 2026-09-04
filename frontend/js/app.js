@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  const store = window.OCEAN_DATA
+  let store = window.OCEAN_DATA
     ? new window.EmbeddedDataStore(window.OCEAN_DATA)
     : new window.ApiDataStore("");
 
@@ -970,7 +970,18 @@
   // App Initialization
   async function init() {
     resizeCanvas();
-    const meta = await store.getMeta();
+    let meta;
+    try {
+      meta = await store.getMeta();
+    } catch (apiErr) {
+      console.warn("REST API unreachable, attempting static data/ocean_data.json fallback for GitHub Pages...", apiErr);
+      const resp = await fetch("data/ocean_data.json");
+      if (!resp.ok) throw new Error("Failed to load static ocean dataset");
+      const rawData = await resp.json();
+      window.OCEAN_DATA = rawData;
+      store = new window.EmbeddedDataStore(rawData);
+      meta = await store.getMeta();
+    }
     depths = meta.depths;
     times = meta.times;
     depthSlider.max = depths.length - 1;
